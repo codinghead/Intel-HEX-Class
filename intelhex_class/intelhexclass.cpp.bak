@@ -81,12 +81,12 @@ using namespace std;
 * List of all possible record types that can be found in an Intel HEX file.
 *******************************************************************************/
 enum intelhexRecordType {
-    DATA_RECORD,                 // '00'
-    END_OF_FILE_RECORD,          // '01'
-    EXTENDED_SEGMENT_ADDRESS,    // '02'
-    START_SEGMENT_ADDRESS,       // '03'
-    EXTENDED_LINEAR_ADDRESS,     // '04'
-    START_LINEAR_ADDRESS,        // '05'
+    DATA_RECORD,
+    END_OF_FILE_RECORD,
+    EXTENDED_SEGMENT_ADDRESS,
+    START_SEGMENT_ADDRESS,
+    EXTENDED_LINEAR_ADDRESS,
+    START_LINEAR_ADDRESS,
     NO_OF_RECORD_TYPES
 };
 
@@ -250,22 +250,6 @@ void intelhex::addError(string errorMessage)
 }
 
 /*******************************************************************************
-* Overwrite data at a given location
-*******************************************************************************/
-void intelhex::overwriteData(unsigned char data, unsigned long address)
-{	
-    map<unsigned long, unsigned char>::iterator ihIterator;
-
-	ihIterator = ihContent.find(address);
-	if(ihIterator != ihContent.end())
-	{
-		ihContent.erase(address);
-	}
-
-	ihReturn = ihContent.insert(pair<unsigned long,unsigned char>(address, data)); 
-}
-
-/*******************************************************************************
 * Decodes a data record read in from a file
 *******************************************************************************/
 void intelhex::decodeDataRecord(unsigned char recordLength,
@@ -295,7 +279,7 @@ void intelhex::decodeDataRecord(unsigned char recordLength,
         byteRead = stringToHex(sByteRead);
         
         ihReturn=ihContent.insert(
-                         pair<unsigned long, unsigned char>(segmentBaseAddress, byteRead)); 
+                         pair<int,unsigned char>(segmentBaseAddress, byteRead)); 
         
         if (ihReturn.second==false)
         {
@@ -723,16 +707,11 @@ istream& operator>>(istream& dataIn, intelhex& ihLocal)
                     case START_LINEAR_ADDRESS:
                         /* Make sure we have 4 bytes of data                  */
                         if (recordLength == 4 && 
-                                     ihLocal.startLinearAddress.exists == false)
+                                      ihLocal.startLinearAddress.exists == false)
                         {
-                            /* Note that the linear start address has been    */
-                            /* found                                          */
-                            ihLocal.startLinearAddress.exists = true;
-
-                            /* Clear the EIP register                         */
+                            /* Extract the four bytes of the SLA              */
                             ihLocal.startLinearAddress.eipRegister = 0;
                             
-                            /* Extract the four bytes of the SLA              */
                             ihByte.erase();
                             ihByte = *ihLineIterator;
                             ++ihLineIterator;
@@ -742,7 +721,6 @@ istream& operator>>(istream& dataIn, intelhex& ihLocal)
                             static_cast<unsigned long>
                                                   (ihLocal.stringToHex(ihByte));
                             ihLocal.startLinearAddress.eipRegister <<= 8;
-                            
                             ihByte.erase();
                             ihByte = *ihLineIterator;
                             ++ihLineIterator;
@@ -752,7 +730,6 @@ istream& operator>>(istream& dataIn, intelhex& ihLocal)
                             static_cast<unsigned long>
                                                   (ihLocal.stringToHex(ihByte));
                             ihLocal.startLinearAddress.eipRegister <<= 8;
-                            
                             ihByte.erase();
                             ihByte = *ihLineIterator;
                             ++ihLineIterator;
@@ -762,7 +739,6 @@ istream& operator>>(istream& dataIn, intelhex& ihLocal)
                             static_cast<unsigned long>
                                                   (ihLocal.stringToHex(ihByte));
                             ihLocal.startLinearAddress.eipRegister <<= 8;
-                            
                             ihByte.erase();
                             ihByte = *ihLineIterator;
                             ++ihLineIterator;
@@ -771,7 +747,6 @@ istream& operator>>(istream& dataIn, intelhex& ihLocal)
                             ihLocal.startLinearAddress.eipRegister += 
                             static_cast<unsigned long>
                                                   (ihLocal.stringToHex(ihByte));
-
                         }
                         /* Note an error if the start seg. address already    */
                         /* exists                                             */
@@ -779,8 +754,8 @@ istream& operator>>(istream& dataIn, intelhex& ihLocal)
                         {
                             string message;
                             
-                            message = "Start Linear Address record appears again @ line " +
-                                      ihLocal.ulToString(lineCounter) +
+                            message = "Start Linear Address record appears again @ line " + 
+                                      ihLocal.ulToString(lineCounter) + 
                                       "; repeated record ignored.";
                             
                             ihLocal.addError(message);
@@ -895,11 +870,11 @@ ostream& operator<<(ostream& dataOut, intelhex& ihLocal)
             thisRecord = ":02000004";
             checksum = 0x02 + 0x04;
             
-			dataByte = static_cast<unsigned char>((addressOffset >> 8) & 0xFF);
+            dataByte = static_cast<unsigned char>(addressOffset & 0xFF);
             checksum += dataByte;
             thisRecord += ihLocal.ucToHexString(dataByte);
             
-            dataByte = static_cast<unsigned char>(addressOffset & 0xFF);
+            dataByte = static_cast<unsigned char>((addressOffset >> 8) & 0xFF);
             checksum += dataByte;
             thisRecord += ihLocal.ucToHexString(dataByte);
             
@@ -914,11 +889,11 @@ ostream& operator<<(ostream& dataOut, intelhex& ihLocal)
             thisRecord = ":02000002";
             checksum = 0x02 + 0x02;
             
-            dataByte = static_cast<unsigned char>((addressOffset >> 8) & 0xFF);
+            dataByte = static_cast<unsigned char>(addressOffset & 0xFF);
             checksum += dataByte;
             thisRecord += ihLocal.ucToHexString(dataByte);
             
-            dataByte = static_cast<unsigned char>(addressOffset & 0xFF);
+            dataByte = static_cast<unsigned char>((addressOffset >> 8) & 0xFF);
             checksum += dataByte;
             thisRecord += ihLocal.ucToHexString(dataByte);
             
@@ -957,11 +932,11 @@ ostream& operator<<(ostream& dataOut, intelhex& ihLocal)
                     thisRecord = ":02000004";
                     checksum = 0x02 + 0x04;
                     
-					dataByte = static_cast<unsigned char>((addressOffset >> 8) & 0xFF);
+                    dataByte = static_cast<unsigned char>(addressOffset & 0xFF);
                     checksum += dataByte;
                     thisRecord += ihLocal.ucToHexString(dataByte);
                     
-					dataByte = static_cast<unsigned char>(addressOffset & 0xFF);
+                    dataByte = static_cast<unsigned char>((addressOffset >> 8) & 0xFF);
                     checksum += dataByte;
                     thisRecord += ihLocal.ucToHexString(dataByte);
                     
@@ -987,11 +962,11 @@ ostream& operator<<(ostream& dataOut, intelhex& ihLocal)
                     thisRecord = ":02000002";
                     checksum = 0x02 + 0x02;
                     
-					dataByte = static_cast<unsigned char>((addressOffset >> 8) & 0xFF);
+                    dataByte = static_cast<unsigned char>(addressOffset & 0xFF);
                     checksum += dataByte;
                     thisRecord += ihLocal.ucToHexString(dataByte);
                     
-                    dataByte = static_cast<unsigned char>(addressOffset & 0xFF);
+                    dataByte = static_cast<unsigned char>((addressOffset >> 8) & 0xFF);
                     checksum += dataByte;
                     thisRecord += ihLocal.ucToHexString(dataByte);
                     
